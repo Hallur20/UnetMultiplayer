@@ -58,7 +58,9 @@ public class PlayerUnit : NetworkBehaviour {
               InvokeRepeating("CmdFire", 0.0f, 0.3f);
               Debug.Log("test");
               */
-            CmdFire();
+            if (readyToShoot == true) {
+                CmdFire();
+            }
         }
 
         if (Input.GetKeyDown(KeyCode.H))
@@ -75,6 +77,13 @@ public class PlayerUnit : NetworkBehaviour {
         {
             CmdStartName("Hallur");
         }
+        if (cloneOnServer == null)
+        {
+            Debug.Log("you can shoot.");
+            readyToShoot = true;
+            CancelInvoke();
+
+        }
     }
         /* if (/*some input*//*true) {
              velocity = new Vector3(1,0,0);
@@ -87,6 +96,7 @@ public class PlayerUnit : NetworkBehaviour {
     public string playerName;
     public GameObject bulletPrefab;
     public Transform bulletSpawn;
+    bool readyToShoot = true;
 
     public GameObject clone;
     GameObject cloneOnServer;
@@ -94,17 +104,17 @@ public class PlayerUnit : NetworkBehaviour {
     [Command]
     void CmdFire()
     {
+        readyToShoot = false;
         GameObject go = Instantiate(clone); //object exists on the server
         go.transform.position = bulletSpawn.transform.GetComponent<Transform>().position;
         NetworkServer.Spawn(go);
         cloneOnServer = go;
-        
-        InvokeRepeating("LaunchProjectile", 0.0f, 0.3f);
+        InvokeRepeating("LaunchProjectile", 0.0f, 0.1f);
     }
     void LaunchProjectile()
     {
         cloneOnServer.transform.Translate(1,0,0);
-        Destroy(cloneOnServer,2.0F);
+        Destroy(cloneOnServer,1.5F);
     }
         void OnPlayerNameChanged(string newName)
     {
