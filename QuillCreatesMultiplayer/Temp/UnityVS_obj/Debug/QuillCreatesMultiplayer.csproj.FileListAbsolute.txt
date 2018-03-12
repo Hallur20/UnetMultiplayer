@@ -1,0 +1,2 @@
+C:\Users\hvn15\Documents\Unity Projects\QuillCreatesMultiplayer\Temp\UnityVS_obj\Debug\QuillCreatesMultiplayer.csprojResolveAssemblyReference.cache
+C:\Users\hvn15\Documents\Unity Projects\QuillCreatesMultiplayer\Temp\UnityVS_obj\Debug\QuillCreatesMultiplayer.csproj.CoreCompileInputs.cache
