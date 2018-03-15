@@ -7,28 +7,33 @@ public class PlayerUnit : NetworkBehaviour {
 
     // Use this for initialization
     void Start() {
-
+            playerName = "hp: " + totalHealth; //start with max health on the syncvar variable (100)
     }
 
-    /* Vector3 velocity; //direction/speed
-     Vector3 bestGuessPosition; // the position we think is most correct for this player,
-     //if we are authority this will be same as transform.position
-     float ourLatency; //updates our latency to the server, i.e. how many seconds it takes for
-                       //us to send a message
+    void OnCollisionEnter(Collision col) //monobehaviour method that makes the playerobject have a collision behaviour (if object touches other object)
+    {
 
-     float latencySmoothingFactor = 10; //higher value = faster local position will match best guess position
-     */
+            if(col.gameObject.name == "Bullet Clone(Clone)") //if player touches bullet clone
+            {
+                Destroy(col.gameObject); //destroy bullet clone
+                Debug.Log("you've been hit.");
+                totalHealth = totalHealth - 10; //take 10 damage
+                playerName = "health: " + totalHealth; //update name with healthpoints
+                if (totalHealth <= 0) // if health is below or zero
+                {
+                CmdDestroyMyUnit(); //destroy player object
+               
+                }
+            }
+    }
     // Update is called once per frame  
     void Update()
     {
         //do code here for ALL version of this object
-        //transform.Translate(velocity * Time.deltaTime);
-        if (hasAuthority == false)
+        if (hasAuthority == false) //if client has not been given authority from server to use this object (this is so other clients cant control your object)
         {
-            /*bestGuessPosition = bestGuessPosition + (velocity * Time.deltaTime);
-            transform.position = Vector3.Lerp(transform.position, bestGuessPosition, Time.deltaTime);*/
-            return;
-        } //do code here for your local object;
+            return; //exit update
+        } // else do code here for your local object;
         if (Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W))
         {
             this.transform.Translate(0, 1, 0); //go up
@@ -47,42 +52,14 @@ public class PlayerUnit : NetworkBehaviour {
         }
         if (Input.GetKeyDown(KeyCode.Space))
         {
-            // Create the Bullet from the Bullet Prefab
-
-
-            /*  clone = (GameObject)Instantiate(
-                  bulletPrefab,
-                  bulletSpawn.position,
-                  bulletSpawn.rotation);
-
-              InvokeRepeating("CmdFire", 0.0f, 0.3f);
-              Debug.Log("test");
-              */
-            if (readyToShoot == true) {
-                CmdFire();
-            }
-        }
-
-        if (Input.GetKeyDown(KeyCode.H))
-        {
-            totalHealth = totalHealth - 10;
-            Debug.Log("ouch! your health is now: " + totalHealth);
-            if (totalHealth <= 0)
-            {
-                CmdDestroyMyUnit();
-                Debug.Log("you're dead.");
+            if (readyToShoot == true) { //if readyToShoot is true
+                Debug.Log(readyToShoot);
+                CmdFire(); //use this client-to-server method
             }
         }
         if (Input.GetKeyDown(KeyCode.P))
         {
             CmdStartName("Hallur");
-        }
-        if (cloneOnServer == null)
-        {
-            Debug.Log("you can shoot.");
-            readyToShoot = true;
-            CancelInvoke();
-
         }
     }
         /* if (/*some input*//*true) {
@@ -96,31 +73,50 @@ public class PlayerUnit : NetworkBehaviour {
     public string playerName;
     public GameObject bulletPrefab;
     public Transform bulletSpawn;
+
     bool readyToShoot = true;
 
     public GameObject clone;
-    GameObject cloneOnServer;
+    
+    GameObject cloneOnClients;
 
     [Command]
     void CmdFire()
     {
-        readyToShoot = false;
-        GameObject go = Instantiate(clone); //object exists on the server
-        go.transform.position = bulletSpawn.transform.GetComponent<Transform>().position;
-        NetworkServer.Spawn(go);
-        cloneOnServer = go;
-        InvokeRepeating("LaunchProjectile", 0.0f, 0.1f);
+                GameObject go = Instantiate(clone); //object exists on the server
+                Vector3 pos = bulletSpawn.transform.GetComponent<Transform>().position;
+                pos.x = pos.x + 1; //start on +1 x away from player so player will not get hit by own bullet
+                go.transform.position = pos;
+                NetworkServer.Spawn(go); //object is spawned on the server
+                RpcsendServerBulletToAllServers(go); //send object to all clients so they can do what they want with it
+    }
+    [ClientRpc]
+    void RpcsendServerBulletToAllServers(GameObject go)
+    {
+        cloneOnClients = go;
+        InvokeRepeating("LaunchProjectile", 0.0f, 0.1f); //start after 0 seconds, repeat every 0.1 second.
+
     }
     void LaunchProjectile()
     {
-        cloneOnServer.transform.Translate(1,0,0);
-        Destroy(cloneOnServer,1.5F);
+        readyToShoot = false;
+        if (cloneOnClients != null) //if the server object exists
+        {
+            cloneOnClients.transform.Translate(1, 0, 0); //move bullet clone +1 x 
+            Destroy(cloneOnClients, 1.5F); // destroy bullet clone after 1.5 seconds
+        } else
+        { 
+            readyToShoot = true;
+            CancelInvoke(); //else cancel the invoke and set readyToShoot to true.
+        }
+       
     }
-        void OnPlayerNameChanged(string newName)
+
+        void OnPlayerNameChanged(string newName) //hook method for playerName
     {
         Debug.Log("changed name to: "+newName);
         playerName = newName;
-        gameObject.GetComponentInChildren<TextMesh>().text = newName;
+        gameObject.GetComponentInChildren<TextMesh>().text = newName; //
        playerName = newName;    //ops remember hook on syncvar doesnt auto update local value
         //tip: while you're in hook, syncvar behaviour is disabled.
     }
@@ -137,24 +133,4 @@ public class PlayerUnit : NetworkBehaviour {
         playerName = name;
 
     }
-    /*[Command]
-    void CmdUpdateVelocity(Vector3 v, Vector3 p) {
-        transform.position = p;
-        velocity = v;
-
-        RpcUpdatVelocity(velocity, transform.position);
-    }
-    [ClientRpc]
-    void RpcUpdatVelocity(Vector3 v, Vector3 p)
-    {
-        if (hasAuthority)
-        {
-            //this is my own object, it's already the most accurate.
-            return;
-        }
-        //i need to listen to server to improve latency accuracy
-        velocity = v;
-        bestGuessPosition = p + (v * (ourLatency));
-        
-    }*/
 }

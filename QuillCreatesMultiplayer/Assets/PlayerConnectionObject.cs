@@ -16,7 +16,6 @@ public class PlayerConnectionObject : NetworkBehaviour {
         }
         //command server to spawn our unit
         CmdSpawnMyUnit();
-        //totalHp = Int32.Parse(GameObject.Find("Hp").GetComponent<Text>().text);
     }
 
     public GameObject PlayerUnitPrefab;
@@ -56,10 +55,11 @@ public class PlayerConnectionObject : NetworkBehaviour {
     [Command] //commands are a way for clients to send a message to the server.
     void CmdSpawnMyUnit()
     {
+        Debug.Log(PlayerUnitPrefab);
         //we are guaranteed to be on the server right now.
         GameObject go = Instantiate(PlayerUnitPrefab); //object exists on the server
-        NetworkServer.SpawnWithClientAuthority(go, connectionToClient); //spawn and spread gameobject all over the network.
-        //also tell everyone on server that one person owns this
+        NetworkServer.SpawnWithClientAuthority(go, connectionToClient); //spawn and spread gameobject all over the network. 
+
     }
 
     [Command]
